@@ -4,6 +4,10 @@ require 'erb'
 $my_verbose = 1
 $my_verbose = false if $my_verbose == 0
 
+desc "update then install"
+task :default => [:update, :install] do
+end
+
 desc "Update the files"
 task :update => [:pull, :upgrade] do
 end
@@ -95,73 +99,26 @@ end
 
 desc "install the tmbundles into '~/Library/Application Support/TextMate/Bundles' directory"
 task :install do
-  base = '~/Library/Application Support/TextMate/Bundles'
+  base = "~/Library/Application Support/TextMate/Bundles"
   if not base
-    puts "Fatal error: no base path given.\nPlease make sure that HOME is set in your environment.\nAborting."
-    exit 1
+    system %Q{mkdir -p "#{bash}"}
   end
 
-  $replace_all = false
   Dir['*'].each do |file|
     next if %w[Rakefile README.md].include? file
 
-    # Install files in "config" separately
-    if 'config' == file
-      Dir[File.join(file, '*')].each do |file|
-        clean_name = file.sub(/\.erb$/, '')
-        install_file(file, File.join(base, "."+clean_name))
-      end
-    else
-      clean_name = file.sub(/\.erb$/, '')
-      install_file(file, File.join(base, "."+clean_name))
-    end
+    puts "linking #{file}"
+
+    link_file(File.expand_path(file), File.expand_path(File.join(base, file)))
   end
-
-end
-
-
-def install_file(file, target)
-  nice_target = target.sub(/#{ENV['HOME']}/, '~') # for display: collapse "~"
-  if File.exist?(target)
-    if File.identical? file, target
-      puts "identical #{nice_target}"
-    elsif $replace_all
-      replace_file(file, target)
-    else
-      print "overwrite #{nice_target}? [ynaq] "
-      case $stdin.gets.chomp
-      when 'a'
-        $replace_all = true
-        replace_file(file, target)
-      when 'y'
-        replace_file(file, target)
-      when 'q'
-        exit
-      else
-        puts "skipping #{nice_target}"
-      end
-    end
-  else
-    link_file(file, target)
-  end
-end
-
-def replace_file(file, target)
-  system %Q{rm -rf "#{target}"}
-  link_file(file, target)
+  
+  # reload textmate bundles
+  system %x[osascript -e 'tell application \"TextMate\" to reload bundles'] 
+  
 end
 
 def link_file(file, target)
-  nice_target = target.sub(/#{ENV['HOME']}/, '~') # for display: collapse "~"
-  if file =~ /.erb$/
-    puts "generating #{nice_target}"
-    File.open(target, 'w') do |new_file|
-      new_file.write ERB.new(File.read(file)).result(binding)
-    end
-  else
-    puts "linking #{nice_target}"
-    system %Q{ln -sfn "$PWD/#{file}" "#{target}"}
-  end
+  system %Q{ln -sfn "#{file}" "#{target}"} 
 end
 
 def get_submodule_status(sm_args='')
