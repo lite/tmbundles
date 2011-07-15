@@ -5,132 +5,13 @@ $my_verbose = 1
 $my_verbose = false if $my_verbose == 0
 
 desc "Update the files"
-task :update => [:pull, :sync_submodules, :update_submodules] do
+task :update => [:pull, :upgrade] do
 end
 
 desc "Pull new changes, via `git pull`"
 task :pull do
   puts "Pulling.." if $my_verbose
   system %Q{git pull} or raise "Git pull failed."
-end
-
-desc "Sync submodules, via `git submodule sync`"
-task :sync_submodules do
-  puts "Syncing submodules.." if $my_verbose
-  system %Q{git submodule --quiet sync 2>&1} or raise "Git submodule sync failed."
-end
-
-desc "Update all submodules"
-task :update_submodules do
-  submodules = get_submodule_status
-  puts "Updating submodules.." if $my_verbose
-  git_sm_has_recursive = true # until proven otherwise
-
-  # Get submodule summary and remove any submodules with _new_ commits from
-  # the list to be updated.
-  sm_summary = %x[git submodule summary]
-  if not $?.success?
-    raise sm_summary
-  end
-  sm_path = nil
-  sm_summary.split("\n").each do |line|
-    if line =~ /^\* (.*?) \w+\.\.\.\w+/
-      sm_path = $1
-    elsif sm_path and line =~ /^  >/
-      puts "Skipping submodule #{sm_path}, which is ahead locally."
-      submodules.delete(sm_path)
-      sm_path = nil
-    end
-  end
-
-  i = 0
-  n = submodules.length
-  begin
-  while true
-    break if i == n
-    path = submodules.keys[i]
-    sm = submodules[path]
-    i+=1
-
-    if $my_verbose
-      cols = `stty size`.scan(/\d+/).map { |s| s.to_i }[1]
-      s = "[#{i}/#{n}] Updating #{path}.."
-      print "\r" + s.ljust(cols, ' ')
-    end
-
-    if git_sm_has_recursive
-      sm_update = %x[git submodule update --init --recursive #{path} 2>&1]
-      if not $?.success?
-        if sm_update.start_with?("Usage: ")
-          git_sm_has_recursive = false
-        end
-      end
-    end
-    if not git_sm_has_recursive
-      sm_update = %x[git submodule update --init #{path} 2>&1]
-    end
-
-    puts sm_update if $my_verbose and sm_update != ""
-    output = sm_update.split("\n")
-    if sm_update =~ /^Unable to checkout '(\w+)' in submodule path '(.*?)'$/
-      if output.index('Please, commit your changes or stash them before you can switch branches.')
-        puts "Stashing changes in #{path}"
-        if submodules[path]['stashed']
-          raise "Already stashed #{path}!"
-        end
-        stash_output = %x[ cd '#{path}' && git stash save 'Stashed for `rake update` at #{Time.new.strftime("%Y-%m-%d %H:%M:%S")}.' ]
-        if not $?.success?
-          raise "ERROR when stashing:\n" + stash_output
-        end
-        submodules[path]['stashed'] = true
-        i -= 1
-        next
-      end
-      github_user = "lite"
-      # check for github_user's remote, and maybe add it and then retry
-      remotes = %x[git --git-dir '#{path}/.git' remote]
-      if remotes =~ /^#{github_user}$/
-        puts "Remote '#{github_user}' exists already." if $my_verbose
-      else
-        puts "Adding remote '#{github_user}'." if $my_verbose
-        output = %x[cd #{path} && hub remote add #{github_user} 2>&1]
-        if not $?.success?
-          puts "Failed to add submodule:\n" + output
-          next
-        end
-      end
-      puts "Fetching remote '#{github_user}'." if $my_verbose
-      output = %x[cd #{path} && git fetch #{github_user} -v 2>&1]
-      if not $?.success?
-        puts "Failed to fetch submodule:\n" + output
-        next
-      end
-      output = output.split("\n")
-      if output.index(' = [up to date]      master     -> blueyed/master')
-        puts "ERROR: blueyed/master already up to date. Something wrong. Skipping.\n\t" + output.join("\n\t")
-        next
-      end
-      puts "Retrying.." if verbose
-      i -= 1
-    end
-  end
-  rescue Exception => exc
-    puts "Exception: " + exc.message
-    puts exc.backtrace.join("\n")
-  ensure
-    submodules.each do |sm_path,sm|
-      if sm['stashed'] == true
-        puts "Unstashing #{sm_path}" if verbose
-        stash_output = %x[cd '#{sm_path}' && git stash pop 2>&1]
-        if not $?.success?
-          puts "ERROR when popping stash for #{sm_path}:\n" + stash_output
-        end
-        sm['stashed'] = false
-      end
-    end
-  end
-
-  # TODO: update/add new symlinks
 end
 
 desc "Upgrade submodules to current master"
@@ -214,7 +95,7 @@ end
 
 desc "install the tmbundles into '~/Library/Application Support/TextMate/Bundles' directory"
 task :install do
-  base = ENV['HOME']
+  base = '~/Library/Application Support/TextMate/Bundles'
   if not base
     puts "Fatal error: no base path given.\nPlease make sure that HOME is set in your environment.\nAborting."
     exit 1
@@ -222,7 +103,7 @@ task :install do
 
   $replace_all = false
   Dir['*'].each do |file|
-    next if %w[Rakefile README.rdoc LICENSE].include? file
+    next if %w[Rakefile README.md].include? file
 
     # Install files in "config" separately
     if 'config' == file
@@ -297,8 +178,4 @@ def get_submodule_status(sm_args='')
     r[path] = {"state" => $1, "commit" => $2}
   end
   return r
-end
-
-def get_modified_submodules()
-  get_submodule_status.delete_if {|path, sm| sm["state"] != "+"}
 end
