@@ -1,0 +1,18 @@
+[submodule "ruby-on-rails-tmbundle"]
+	path = ruby-on-rails.tmbundle
+	url = git://github.com/drnic/ruby-on-rails-tmbundle.git
+[submodule "capybara-tmbundle"]
+	path = capybara.tmbundle
+	url = git://github.com/lucasefe/capybara-tmbundle.git
+[submodule "sass-textmate-bundle"]
+	path = sass.tmbundle
+	url = git://github.com/seaofclouds/sass-textmate-bundle.git
+[submodule "handcrafted-haml-textmate-bundle"]
+	path = handcrafted-haml.tmbundle
+	url = git://github.com/handcrafted/handcrafted-haml-textmate-bundle.git
+[submodule "cucumber-tmbundle"]
+	path = cucumber.tmbundle
+	url = git://github.com/diabolo/cucumber-tmbundle.git
+[submodule "jquery-tmbundle"]
+	path = jquery.tmbundle
+	url = git://github.com/kswedberg/jquery-tmbundle.git
