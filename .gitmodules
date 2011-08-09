@@ -10,9 +10,6 @@
 [submodule "handcrafted-haml.tmbundle"]
 	path = handcrafted-haml.tmbundle
 	url = git://github.com/handcrafted/handcrafted-haml-textmate-bundle.git
-[submodule "cucumber.tmbundle"]
-	path = cucumber.tmbundle
-	url = git://github.com/diabolo/cucumber-tmbundle.git
 [submodule "jquery.tmbundle"]
 	path = jquery.tmbundle
 	url = git://github.com/kswedberg/jquery-tmbundle.git
@@ -22,9 +19,6 @@
 [submodule "Showoff.tmbundle"]
 	path = Showoff.tmbundle
 	url = git://github.com/drnic/Showoff.tmbundle.git
-[submodule "motion_commands.tmbundle"]
-	path = motion_commands.tmbundle
-	url = git://github.com/rwilcox/motion_commands.tmbundle.git
 [submodule "cucumber-tmbundle"]
 	path = cucumber-tmbundle
 	url = git://github.com/cucumber/cucumber-tmbundle.git
